@@ -1,0 +1,1 @@
+Playing with programming AVR chips directly (no Arduinos here) using Adafruit's USBTiny ISP kit and some ATTiny13a chips.  Implementing the "firefly" project by Karl Lunt (http://www.seanet.com/~karllunt/fireflyLED.html)
