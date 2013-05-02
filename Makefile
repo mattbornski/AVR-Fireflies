@@ -1,6 +1,5 @@
 # Compilation options
 PROGRAM = firefly
-ARCH = avr25
 MCU = attiny13a
 CC = avr-gcc
 OBJCOPY = avr-objcopy
@@ -33,6 +32,8 @@ $(PROGRAM).hex: $(PROGRAM).elf
 
 flash: $(PROGRAM).hex
 	@printf "  FLASH   $(PROGRAM).hex\n"
+	@printf "  SIZE\n"
+	@avr-size $(PROGRAM).hex
 	$(Q)avrdude -c $(TOOL) -P usb -p $(TARGET) -U flash:w:$(PROGRAM).hex
 
 clean:

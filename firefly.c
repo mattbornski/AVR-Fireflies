@@ -16,7 +16,8 @@
 #define LED_BIT			4
 #define LED_MASK		(1<<LED_BIT)
 
-#define NUM_DELAYS		16
+#define SEARCHING_DELAYS	128
+#define BLINKING_DELAYS		24
 
 
 volatile uint8_t delays;
@@ -33,6 +34,7 @@ static void BlinkLED(void);
 
 int main(void) {
 	uint8_t mcuflags;
+	uint16_t i;
 	uint16_t v;
 
 //
@@ -91,12 +93,14 @@ int main(void) {
 			LED_DDR &= ~LED_MASK;
 
 			v = ReadLightLevel();
-			if (v < 10) {
+			if (v < 3) {
 				BlinkLED();
 				_delay_ms(800);
 				BlinkLED();
+				delays = BLINKING_DELAYS;
+			} else {
+				delays = SEARCHING_DELAYS;
 			}
-			delays = NUM_DELAYS;
 		}
 	}
 }
@@ -116,17 +120,28 @@ int main(void) {
 //
 static uint16_t ReadLightLevel(void) {
 	uint16_t r;
-
+	// Power on the ADC
 	PRR &= ~(1<<PRADC);
-	ADMUX = (1<<MUX1);
+	// Use internal VRef for our reference (1.1V) instead of Vcc
+	// Use ADC channel 2 for our input
+	ADMUX = (1<<REFS0) | (1<<MUX1);
+	// The "B" ADC control register doesn't have any options we will be using
 	ADCSRB = 0;
+	// The "A" ADC control register does, though.  Configure the clock prescaler to sample at 64x the system clock.
 	ADCSRA = (1<<ADPS2) | (1<<ADPS1);
+	// Enable the ADC and ensure that the interrupt flag is cleared (by setting it to high).
 	ADCSRA |= (1<<ADEN) | (1<<ADIF);
+	// Start conversion.  This is a throwaway conversion; we don't care about the value, but we want to ADC to be ready.
 	ADCSRA |= (1<<ADSC);
+	// Wait for conversion to complete.
 	while (ADCSRA & (1<<ADSC))  ;
-	_delay_ms(3);
+	// When the ADC is enabled there is a voltage spike on the LED.  The 1 MOhm resistor will quickly bleed it off, just give it a few milliseconds:
+	_delay_ms(10);
+	// Flip the "start conversion" bit it the "A" ADC control register
 	ADCSRA |= (1<<ADSC);
+	// Wait for conversion to complete.
 	while (ADCSRA & (1<<ADSC))  ;
+	// Capture the result from the ADC result registers (10 bits, two bytes)
 	r = ADCL;
 	r = r + (ADCH << 8);
 	return r;
